@@ -111,6 +111,9 @@ application = Application.builder().token(TOKEN).build()
 async def lifespan(app: FastAPI):
     """Handles the bot's setup and shutdown procedures."""
     # On startup:
+    logger.info("Initializing the application...")
+    await application.initialize()  # This is the crucial line that was missing
+    
     logger.info("Setting up bot handlers and webhook...")
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
@@ -120,9 +123,10 @@ async def lifespan(app: FastAPI):
     yield  # The application runs while the server is alive.
     
     # On shutdown:
-    logger.info("Cleaning up and deleting webhook...")
+    logger.info("Cleaning up, deleting webhook, and shutting down...")
     await application.bot.delete_webhook()
-    logger.info("Webhook has been deleted.")
+    await application.shutdown()  # This ensures a clean shutdown
+    logger.info("Webhook has been deleted and application shut down.")
 
 # Create the FastAPI app with our new lifespan manager.
 fastapi_app = FastAPI(lifespan=lifespan)
