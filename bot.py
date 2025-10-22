@@ -98,7 +98,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.info(f"Curse word detected from user: {user.first_name} ({user.id})")
         await update.message.reply_text("Эй, не матерись")
 
-# --- REFACTORED WEBHOOK STARTUP LOGIC ---
+# --- CORRECTED WEBHOOK LIFESPAN LOGIC ---
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 WEBHOOK_URL = os.getenv("RENDER_EXTERNAL_URL")
@@ -112,7 +112,7 @@ async def lifespan(app: FastAPI):
     """Handles the bot's setup and shutdown procedures."""
     # On startup:
     await application.initialize()
-    await application.start() # Start the background tasks for processing updates
+    await application.start()
     
     logger.info("Setting up bot handlers and webhook...")
     application.add_handler(CommandHandler("start", start))
@@ -122,12 +122,16 @@ async def lifespan(app: FastAPI):
     
     yield  # The application runs while the server is alive.
     
-    # On shutdown:
+    # On shutdown (CORRECTED ORDER):
     logger.info("Cleaning up, deleting webhook, and shutting down...")
-    await application.stop() # Stop the background tasks
-    await application.shutdown()
+    # 1. Delete the webhook FIRST, while the network connection is still active.
     await application.bot.delete_webhook()
-    logger.info("Webhook has been deleted and application shut down.")
+    logger.info("Webhook has been deleted.")
+    # 2. Then stop the application's background tasks.
+    await application.stop()
+    # 3. Finally, shut down the application's core components.
+    await application.shutdown()
+    logger.info("Application has been shut down.")
 
 # Create the FastAPI app with our new lifespan manager.
 fastapi_app = FastAPI(lifespan=lifespan)
