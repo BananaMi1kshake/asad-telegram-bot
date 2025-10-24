@@ -146,7 +146,7 @@ async def telegram_webhook(update: dict) -> Response:
         logger.error(f"Error processing update: {e}")
         return Response(status_code=500)
 
-@fastapi_app.get("/health")
+@fastapi_app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check() -> Response:
     """A simple endpoint for Render's health checks."""
     return Response(status_code=200, content="OK")
